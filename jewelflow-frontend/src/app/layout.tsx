@@ -20,11 +20,20 @@ export const metadata: Metadata = {
   authors: [{ name: "JewelFlow Team" }],
   icons: {
     icon: [
-      { url: '/logo.png', sizes: 'any' },
-      { url: '/logo.png', type: 'image/png', sizes: '32x32' },
+      { 
+        url: '/logo.png',
+        type: 'image/png',
+        sizes: '64x64',
+        rel: 'icon',
+      },
     ],
     apple: [
-      { url: '/logo.png', type: 'image/png' },
+      { 
+        url: '/logo.png',
+        sizes: '180x180',
+        type: 'image/png',
+        rel: 'apple-touch-icon',
+      },
     ],
   },
   themeColor: '#ffffff',

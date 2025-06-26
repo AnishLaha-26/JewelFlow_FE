@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { register } from '@/app/services/api';
 
 const SignupForm = () => {
   const [firstName, setFirstName] = useState('');
@@ -9,6 +10,9 @@ const SignupForm = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
@@ -26,27 +30,37 @@ const SignupForm = () => {
     );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    setSuccess(null);
     
     if (password !== confirmPassword) {
-      alert('Passwords do not match');
+      setError('Passwords do not match');
       return;
     }
     
     if (!acceptTerms) {
-      alert('Please accept the terms and conditions');
+      setError('Please accept the terms and conditions');
       return;
     }
-    
-    // Handle signup logic here
-    console.log('Signup data:', {
-      firstName,
-      lastName,
-      email,
-      password,
-      acceptTerms
-    });
+
+    setIsLoading(true);
+    try{
+      const userData = {
+        first_name: firstName,
+        last_name: lastName,
+        email: email,
+        password: password,
+      };
+      await register(userData);
+      setSuccess('User registered successfully');
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || "An unexpected error occurred.";
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -207,11 +221,13 @@ const SignupForm = () => {
             </div>
           </div>
 
+
           {/* Submit Button */}
           <button
             type="submit"
-            className={`w-full py-3 px-6 font-semibold rounded-xl transition-all duration-300 ${
-              isFormComplete()
+            disabled={!isFormComplete() || isLoading || !!success}
+            className={`w-full py-3 px-6 font-semibold rounded-xl transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed${
+              isFormComplete() && !success
                 ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white btn-liquid hover:scale-105 shadow-xl'
                 : 'liquid-glass-subtle border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-gray-400 dark:hover:border-gray-500'
             }`}
