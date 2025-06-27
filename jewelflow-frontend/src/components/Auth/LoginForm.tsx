@@ -5,6 +5,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { loginUser } from '@/app/services/api';
 
+// Define role-based dashboard paths
+const DASHBOARD_PATHS: Record<string, string> = {
+  admin: '/admin/dashboard',
+  user: '/user/dashboard',
+  // Default fallback for backwards compatibility
+  default: '/user/dashboard'
+};
+
 interface FieldErrors {
   email?: string;
   password?: string;
@@ -121,30 +129,33 @@ const LoginForm = () => {
 
       // Store tokens with correct keys matching dashboard expectations
       if (response.access) {
-        localStorage.setItem('authToken', response.access);
-        localStorage.setItem('access_token', response.access);
+        // Store tokens based on remember me preference
+        const storage = rememberMe ? localStorage : sessionStorage;
+        storage.setItem('access_token', response.access);
         
-        // Store refresh token based on remember me preference
         if (response.refresh) {
-          if (rememberMe) {
-            localStorage.setItem('refresh_token', response.refresh);
-          } else {
-            // Use sessionStorage for temporary sessions
-            sessionStorage.setItem('refresh_token', response.refresh);
-          }
+          storage.setItem('refresh_token', response.refresh);
         }
 
-        // Store user data for dashboard
+        // Store complete user data from the response
         const userData = {
-          email: email,
-          firstName: response.user?.first_name || '',
-          lastName: response.user?.last_name || '',
+          id: response.user?.id,
+          email: response.user?.email || email,
+          first_name: response.user?.first_name,
+          last_name: response.user?.last_name,
+          role: response.user?.role || 'user', // Ensure role is set, default to 'user'
           ...response.user
         };
+        
+        // Store user data in localStorage for persistence across page reloads
         localStorage.setItem('userData', JSON.stringify(userData));
 
-        // Redirect to dashboard
-        router.push('/dashboard');
+        // Determine redirect path based on user role
+        const userRole = (userData.role || 'user').toLowerCase();
+        const redirectPath = DASHBOARD_PATHS[userRole] || DASHBOARD_PATHS.default;
+        
+        // Redirect to the appropriate dashboard
+        router.push(redirectPath);
       } else {
         setError('Login failed: Invalid response from server');
       }
@@ -300,7 +311,7 @@ const LoginForm = () => {
                 type="checkbox"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                className="w-4 h-4 appearance-none bg-black dark:bg-gray-900 border-2 border-blue-500 rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 checked:bg-blue-600 checked:border-blue-600 transition-all duration-200"
+                className="w-4 h-4 appearance-none bg-white dark:bg-gray-900 border-2 border-blue-500 rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 checked:bg-blue-600 checked:border-blue-600 transition-all duration-200"
               />
               {rememberMe && (
                 <svg

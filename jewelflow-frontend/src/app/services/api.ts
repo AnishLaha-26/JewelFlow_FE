@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getAccessToken, getRefreshToken, clearTokens } from './auth';
+import { getAccessToken, getRefreshToken, clearAuthData } from './auth';
 
 // Get the API URL from environment variables with a fallback for development
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
@@ -15,7 +15,6 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
-
 // Request interceptor to include JWT authentication token
 api.interceptors.request.use(
   (config) => {
@@ -67,7 +66,7 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         // If refresh fails, clear tokens and redirect to login
-        clearTokens();
+        clearAuthData();
         if (typeof window !== 'undefined') {
           window.location.href = '/login';
         }
@@ -89,15 +88,37 @@ export const register = (userData: any) => {
 };
 
 /**
- * Corresponds to 'POST /api/login' in the architecture diagram.
- * Sends user login credentials to the backend.
- * @param credentials - An object containing email and password.
+ * Login user with email and password
+ * @param credentials User credentials
+ * @returns Object containing tokens and user data
  */
 export const loginUser = async (credentials: { email: string; password: string }) => {
-  const response = await api.post('/api/token/', {
+  // First get the authentication tokens
+  const authResponse = await api.post('/api/token/', {
     email: credentials.email,
     password: credentials.password,
   });
+  
+  // Then get the user profile
+  const profileResponse = await api.get('/api/users/me/', {
+    headers: {
+      'Authorization': `Bearer ${authResponse.data.access}`
+    }
+  });
+  
+  // Return combined data
+  return {
+    ...authResponse.data,
+    user: profileResponse.data
+  };
+};
+
+/**
+ * Get current user profile
+ * @returns User profile data
+ */
+export const getCurrentUser = async () => {
+  const response = await api.get('/api/users/me/');
   return response.data;
 };
 

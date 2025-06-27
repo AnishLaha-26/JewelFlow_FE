@@ -1,4 +1,13 @@
 // Token management utilities
+export interface UserData {
+  id: string | number;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  role: 'admin' | 'user';
+  [key: string]: any;
+}
+
 export const getAccessToken = (): string | null => {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
@@ -12,31 +21,58 @@ export const getRefreshToken = (): string | null => {
 export const setTokens = (accessToken: string, refreshToken?: string, remember?: boolean) => {
   if (typeof window === 'undefined') return;
   
-  localStorage.setItem('access_token', accessToken);
+  const storage = remember ? localStorage : sessionStorage;
+  storage.setItem('access_token', accessToken);
   
   if (refreshToken) {
-    if (remember) {
-      localStorage.setItem('refresh_token', refreshToken);
-    } else {
-      sessionStorage.setItem('refresh_token', refreshToken);
-    }
+    storage.setItem('refresh_token', refreshToken);
   }
 };
 
-export const clearTokens = () => {
+export const setUserData = (userData: UserData) => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('userData', JSON.stringify(userData));
+};
+
+export const getUserData = (): UserData | null => {
+  if (typeof window === 'undefined') return null;
+  
+  const userDataStr = localStorage.getItem('userData');
+  if (!userDataStr) return null;
+  
+  try {
+    return JSON.parse(userDataStr);
+  } catch (e) {
+    console.error('Error parsing user data:', e);
+    return null;
+  }
+};
+
+export const clearAuthData = () => {
   if (typeof window === 'undefined') return;
   
+  // Clear all auth-related data
   localStorage.removeItem('access_token');
   localStorage.removeItem('refresh_token');
+  localStorage.removeItem('userData');
   sessionStorage.removeItem('access_token');
   sessionStorage.removeItem('refresh_token');
 };
 
 export const isAuthenticated = (): boolean => {
-  return !!(getAccessToken() || getRefreshToken());
+  const token = getAccessToken();
+  if (!token) return false;
+  
+  // Check if token is expired
+  if (isTokenExpired(token)) {
+    // Optional: Try to refresh token here
+    return false;
+  }
+  
+  return true;
 };
 
-// Decode JWT token to get user info (basic implementation)
+// Decode JWT token to get user info
 export const decodeToken = (token: string) => {
   try {
     const base64Url = token.split('.')[1];
@@ -67,10 +103,7 @@ export const isTokenExpired = (token: string): boolean => {
 };
 
 export const logout = () => {
-  clearTokens();
-  
-  // Clear any other app-specific data
-  // localStorage.removeItem('user_preferences');
+  clearAuthData();
   
   // Redirect to login
   if (typeof window !== 'undefined') {
@@ -78,10 +111,24 @@ export const logout = () => {
   }
 };
 
-// Get current user info from token
-export const getCurrentUser = () => {
+// Get current user info from token or stored data
+export const getCurrentUser = (): UserData | null => {
+  // First try to get from localStorage
+  const userData = getUserData();
+  if (userData) return userData;
+  
+  // Fallback to token data
   const token = getAccessToken();
   if (!token) return null;
   
-  return decodeToken(token);
+  const tokenData = decodeToken(token);
+  if (!tokenData) return null;
+  
+  return {
+    id: tokenData.user_id || tokenData.sub,
+    email: tokenData.email,
+    first_name: tokenData.first_name || tokenData.given_name,
+    last_name: tokenData.last_name || tokenData.family_name,
+    role: tokenData.role || 'user'
+  };
 };

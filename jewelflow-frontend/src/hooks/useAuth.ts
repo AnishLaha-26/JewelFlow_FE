@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { isAuthenticated, getCurrentUser, getAccessToken } from '@/app/services/auth';
+import { RiSurgicalMaskFill } from 'react-icons/ri';
 
 export interface User {
   id: string;
   email: string;
   first_name?: string;
   last_name?: string;
-  // Add other user properties as needed
+  role: 'admin' | 'user';
 }
 
 export const useAuth = () => {
@@ -14,13 +15,51 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
 
+  const getUserData = (): User | null => {
+    if (typeof window === 'undefined') return null;
+    
+    // First try to get from localStorage
+    const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
+    if (!token) return null;
+    
+    // Get user data from localStorage if available
+    const userDataStr = localStorage.getItem('userData');
+    if (userDataStr) {
+      try {
+        const userData = JSON.parse(userDataStr);
+        return {
+          id: userData.id,
+          email: userData.email,
+          first_name: userData.first_name || userData.firstName,
+          last_name: userData.last_name || userData.lastName,
+          role: userData.role || 'user' // Default to 'user' if role not specified
+        };
+      } catch (e) {
+        console.error('Error parsing user data:', e);
+      }
+    }
+    
+    // Fallback to token data
+    const tokenData = getCurrentUser();
+    if (tokenData) {
+      return {
+        id: tokenData.user_id || tokenData.sub,
+        email: tokenData.email,
+        first_name: tokenData.first_name || tokenData.name,
+        role: tokenData.role || 'user'
+      };
+    }
+    
+    return null;
+  };
+
   useEffect(() => {
     const checkAuth = () => {
       const authStatus = isAuthenticated();
       setAuthenticated(authStatus);
       
       if (authStatus) {
-        const userData = getCurrentUser();
+        const userData = getUserData();
         setUser(userData);
       } else {
         setUser(null);
@@ -33,7 +72,7 @@ export const useAuth = () => {
 
     // Listen for storage changes (login/logout from other tabs)
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'access_token' || e.key === 'refresh_token') {
+      if (e.key === 'access_token' || e.key === 'refresh_token' || e.key === 'userData') {
         checkAuth();
       }
     };
@@ -44,9 +83,16 @@ export const useAuth = () => {
     };
   }, []);
 
-  const updateUser = () => {
-    const userData = getCurrentUser();
-    setUser(userData);
+  const updateUser = (userData?: Partial<User>) => {
+    if (userData) {
+      const currentUser = getUserData() || {};
+      const updatedUser = { ...currentUser, ...userData } as User;
+      localStorage.setItem('userData', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+    } else {
+      const userData = getUserData();
+      setUser(userData);
+    }
   };
 
   return {
@@ -57,3 +103,5 @@ export const useAuth = () => {
     isAuthenticated: authenticated,
   };
 };
+
+

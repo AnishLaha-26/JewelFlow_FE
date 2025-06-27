@@ -13,12 +13,12 @@ const SignupPage = () => {
   return (
     <div className="min-h-screen relative overflow-hidden">
       {/* Liquid background elements */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-white to-purple-50/50 dark:from-gray-950 dark:via-gray-900 dark:to-purple-950/50" />
+      <div className="absolute inset-0 bg-gradient-to-br from-white via-purple-50 to-blue-100 dark:from-gray-950 dark:via-gray-900 dark:to-purple-950/50" />
       
       {/* Floating orbs */}
-      <div className="absolute top-20 left-10 w-80 h-80 bg-gradient-to-r from-blue-300/20 to-purple-300/20 dark:from-blue-600/20 dark:to-purple-600/20 rounded-full blur-3xl animate-float" />
-      <div className="absolute bottom-32 right-10 w-96 h-96 bg-gradient-to-r from-purple-300/20 to-pink-300/20 dark:from-purple-600/20 dark:to-pink-600/20 rounded-full blur-3xl animate-float-delayed" />
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-blue-200/10 to-purple-200/10 dark:from-blue-700/10 dark:to-purple-700/10 rounded-full blur-3xl" />
+      <div className="absolute top-20 left-10 w-80 h-80 bg-gradient-to-r from-blue-200/40 to-purple-300/40 dark:from-blue-600/20 dark:to-purple-600/20 rounded-full blur-3xl animate-float" />
+      <div className="absolute bottom-32 right-10 w-96 h-96 bg-gradient-to-r from-purple-200/40 to-blue-300/40 dark:from-purple-600/20 dark:to-pink-600/20 rounded-full blur-3xl animate-float-delayed" />
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-blue-100/30 to-purple-100/30 dark:from-blue-700/10 dark:to-purple-700/10 rounded-full blur-3xl" />
       
       {/* Header */}
       <header className="relative z-20 p-6">
@@ -76,4 +76,3 @@ const SignupPage = () => {
 };
 
 export default SignupPage;
-

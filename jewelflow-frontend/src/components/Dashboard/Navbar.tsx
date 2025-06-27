@@ -67,8 +67,8 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
   };
 
   return (
-    <header className="liquid-glass border-b border-white/20 dark:border-gray-700/50 backdrop-blur-xl">
-      <div className="flex items-center justify-between px-6 py-4">
+    <header className="liquid-glass-subtle backdrop-blur-xl">
+      <div className="flex items-center justify-between px-6 py-4 h-[73px]">
         {/* Search Bar */}
         <div className="flex-1 max-w-xl mr-6">
           <div className="relative">
