@@ -3,9 +3,11 @@
 import { useState } from 'react';
 import Drawer from '@/components/UI/Drawer';
 
-interface Column {
+export interface Column {
   key: string;
   label: string;
+  type?: 'text' | 'date' | 'number' | 'boolean';
+  renderCell?: (value: any, row: any) => React.ReactNode;
 }
 
 interface MasterDataLayoutProps {
@@ -15,8 +17,16 @@ interface MasterDataLayoutProps {
   onAdd: () => void;
   onEdit: (item: any) => void;
   onDelete: (item: any) => void;
-  onBulkDelete?: (ids: string[]) => void;
+  onBulkDelete?: (ids: (string | number)[]) => void;
   searchPlaceholder?: string;
+  selectedIds?: (string | number)[];
+  onRowSelect?: (id: string | number, isSelected: boolean) => void;
+  onSelectAll?: (isSelected: boolean) => void;
+  isLoading?: boolean;
+  isDrawerOpen?: boolean;
+  onDrawerClose?: () => void;
+  drawerTitle?: string;
+  drawerContent?: React.ReactNode;
   children?: React.ReactNode;
 }
 
@@ -29,14 +39,20 @@ export default function MasterDataLayout({
   onDelete,
   onBulkDelete,
   searchPlaceholder = "Search...",
+  selectedIds = [],
+  onRowSelect,
+  onSelectAll,
+  isLoading = false,
+  isDrawerOpen = false,
+  onDrawerClose,
+  drawerTitle,
+  drawerContent,
   children
 }: MasterDataLayoutProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortColumn, setSortColumn] = useState<string>('');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [selectedItems, setSelectedItems] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<(string | number)[]>([]);
 
   // Helper function to convert plural titles to singular
   const getSingularTitle = (plural: string): string => {
@@ -52,6 +68,59 @@ export default function MasterDataLayout({
     };
     
     return singularMap[plural] || plural.replace(/s$/, '');
+  };
+
+  // Helper function to format cell values based on column type
+  const formatCellValue = (value: any, column: Column): React.ReactNode => {
+    if (value === null || value === undefined || value === '') return '-';
+    
+    // Use custom renderer if provided
+    if (column.renderCell) {
+      return column.renderCell(value, items.find(item => item[column.key] === value));
+    }
+    
+    switch (column.type) {
+      case 'boolean':
+        return value ? 'Yes' : 'No';
+        
+      case 'date':
+        try {
+          // Handle different date formats from database
+          let dateObj: Date;
+          
+          if (typeof value === 'string') {
+            // Handle database datetime format: "2025-06-28 15:12:57.018 +0700"
+            // Replace space with T for proper ISO format if needed
+            const isoString = value.includes('T') ? value : value.replace(' ', 'T');
+            dateObj = new Date(isoString);
+          } else {
+            dateObj = new Date(value);
+          }
+          
+          // Check if date is valid
+          if (isNaN(dateObj.getTime())) {
+            return value.toString();
+          }
+          
+          // Compact date format
+          return dateObj.toLocaleDateString('en-US', {
+            year: '2-digit',
+            month: 'numeric',
+            day: 'numeric'
+          }) + ' ' + dateObj.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: false
+          });
+        } catch (error) {
+          console.error('Date parsing error:', error, 'Value:', value);
+          return value.toString();
+        }
+      case 'number':
+        return typeof value === 'number' ? value.toLocaleString() : value.toString();
+      default:
+        return value.toString();
+    }
   };
 
   const filteredItems = items.filter(item =>
@@ -70,9 +139,8 @@ export default function MasterDataLayout({
     return sortDirection === 'asc' ? comparison : -comparison;
   });
 
-  const handleAddNew = () => {
-    setIsDrawerOpen(true);
-    onAdd();
+  const handleAdd = () => {
+    onAdd?.();
   };
 
   const handleSelectAll = () => {
@@ -101,10 +169,13 @@ export default function MasterDataLayout({
   };
 
   const handleBulkDelete = () => {
-    if (onBulkDelete && selectedItems.length > 0) {
-      onBulkDelete(selectedItems);
-      setSelectedItems([]);
+    if (selectedItems.length === 0) return;
+    
+    if (onBulkDelete) {
+      // Convert all IDs to strings to ensure type compatibility
+      onBulkDelete(selectedItems.map(id => id.toString()));
     }
+    setSelectedItems([]);
   };
 
   return (
@@ -123,7 +194,7 @@ export default function MasterDataLayout({
         {/* Add New Button in Header */}
         <div className="flex items-center gap-3">
           <button
-            onClick={handleAddNew}
+            onClick={handleAdd}
             className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl"
             title={`Add New ${getSingularTitle(title)}`}
           >
@@ -178,7 +249,7 @@ export default function MasterDataLayout({
               {selectedItems.length > 0 && onBulkDelete && (
                 <button
                   onClick={handleBulkDelete}
-                  className="ml-6 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-200 flex items-center gap-2"
+                  className="ml-6 px-4 py-2 bg-gradient-to-r from-red-500 to-pink-600 text-white rounded-lg hover:from-red-600 hover:to-pink-700 transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -243,10 +314,14 @@ export default function MasterDataLayout({
                       </div>
                     </th>
                     {columns.map((column) => (
-                      <th key={column.key} className="text-left p-4 font-semibold text-gray-900 dark:text-white">
+                      <th key={column.key} className={`p-4 font-semibold text-gray-900 dark:text-white ${
+                        column.key === 'is_active' ? 'text-center' : 'text-left'
+                      }`}>
                         <button
                           onClick={() => handleSort(column.key)}
-                          className="flex items-center gap-2 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                          className={`flex items-center gap-2 hover:text-blue-600 dark:hover:text-blue-400 transition-colors ${
+                            column.key === 'is_active' ? 'justify-center w-full' : ''
+                          }`}
                         >
                           {column.label}
                           {sortColumn === column.key && (
@@ -286,8 +361,10 @@ export default function MasterDataLayout({
                         </div>
                       </td>
                       {columns.map((column) => (
-                        <td key={column.key} className="p-4 text-gray-700 dark:text-gray-300">
-                          {item[column.key]}
+                        <td key={column.key} className={`p-4 text-gray-700 dark:text-gray-300 ${
+                          column.key === 'is_active' ? 'text-center' : ''
+                        }`}>
+                          {column.renderCell ? column.renderCell(item[column.key], item) : formatCellValue(item[column.key], column)}
                         </td>
                       ))}
                       <td className="p-4">
@@ -336,12 +413,12 @@ export default function MasterDataLayout({
       {/* Floating Drawer for Forms */}
       <Drawer
         isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-        title={`Add New ${getSingularTitle(title)}`}
+        onClose={() => onDrawerClose?.()}
+        title={drawerTitle || `Add New ${getSingularTitle(title)}`}
         size="md"
       >
         <div className="space-y-6">
-          {children || (
+          {drawerContent || children || (
             <div className="text-center py-8 text-gray-500 dark:text-gray-400">
               Form fields will be implemented with backend integration
             </div>

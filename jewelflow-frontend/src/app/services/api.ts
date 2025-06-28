@@ -133,6 +133,44 @@ export const refreshToken = async () => {
   return response.data;
 };
 
+//Product Categories API
+export const productCategoryApi = {
+  //Get all product categories 
+  getAll: async () => {
+    const response = await api.get('/api/products/categories/');
+    return response.data;
+  },
+
+  //Create a new product category
+  create:async (data: {name: string; description?: string}) => {
+    const response = await api.post('/api/products/categories/', data);
+    return response.data;
+  },
+
+  //Update a product category
+  update:async (id: string, data: {name: string; description?: string}) => {
+    const response = await api.put(`/api/products/categories/${id}/`, data);
+    return response.data;
+  },
+
+  //Delete a product category
+  delete:async (id: string) => {
+    await api.delete(`/api/products/categories/${id}/`);
+  },
+
+  //Bulk delete product categories
+  bulkDelete:async (ids: string[]) => {
+    await api.delete(`/api/products/categories/bulk/`, { data: { ids } });
+  },
+
+  // Toggle active status
+  toggleStatus: async (id: number, isActive: boolean) => {
+    const response = await api.patch(`/api/products/categories/${id}/`, { is_active: isActive });
+    return response.data;
+  },
+}
+
+
 // You can add other API functions here later, such as for 'GET /api/profile'.
 
 export default api;
